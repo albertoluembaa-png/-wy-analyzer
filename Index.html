@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>WY ANALYZER</title>
+<style>
+:root{--blue:#155eef;--navy:#12315a;--pale:#eef5ff;--line:#dbe5f2;--ink:#172b4d;--muted:#63748b;--white:#fff;--green:#16834a;--red:#c0392b}
+*{box-sizing:border-box}body{margin:0;background:#f5f8fc;color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#fff;border-bottom:1px solid var(--line);padding:20px 16px;position:sticky;top:0;z-index:2}
+h1{margin:0;color:var(--navy);font-size:24px}header p{margin:5px 0 0;color:var(--muted);font-size:13px}
+main{max-width:760px;margin:auto;padding:16px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 14px;box-shadow:0 3px 12px #18365b0a}
+label{display:block;font-weight:650;margin:12px 0 6px}
+select,input,button{font:inherit}
+select,input{width:100%;padding:12px;border:1px solid #cbd7e6;border-radius:10px;background:#fff;color:var(--ink)}
+button{border:0;border-radius:10px;padding:12px 15px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}
+button.secondary{background:var(--pale);color:var(--blue);border:1px solid #cbdcf8}
+button.danger{background:#fff0ef;color:var(--red);border:1px solid #f3c7c3}
+.row{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.row button{flex:1}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.tabs button{background:#edf3fc;color:var(--navy)}.tabs button.active{background:var(--blue);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:#f5f8fd;border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat small{display:block;color:var(--muted);font-size:12px}.stat strong{font-size:21px;color:var(--navy)}
+.notice{background:#fff8e7;border:1px solid #f1dfa9;color:#765719;padding:12px;border-radius:12px;font-size:13px;line-height:1.45}
+.good{color:var(--green)}.bad{color:var(--red)}
+ul{padding-left:20px;margin:8px 0}li{padding:3px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+.pill{display:inline-block;background:var(--pale);color:var(--blue);border-radius:99px;padding:4px 9px;font-size:12px;font-weight:700}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
+#lock{position:fixed;inset:0;background:#f5f8fc;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px}
+#lock .panel{width:min(430px,100%)}
+</style>
+</head>
+<body>
+<div id="lock">
+ <div class="panel">
+  <h1>WY ANALYZER</h1><p>Proteção local do navegador</p>
+  <div id="setup" class="hidden">
+   <label for="newpin">Criar palavra-passe (mínimo 8 caracteres)</label><input id="newpin" type="password" autocomplete="new-password">
+   <button style="width:100%;margin-top:12px" onclick="createPassword()">Criar proteção</button>
+  </div>
+  <div id="login" class="hidden">
+   <label for="pin">Palavra-passe</label><input id="pin" type="password" autocomplete="current-password">
+   <button style="width:100%;margin-top:12px" onclick="unlock()">Entrar</button>
+   <p id="loginError" class="bad"></p>
+  </div>
+  <p class="notice">Os dados ficam guardados neste navegador. Se apagares os dados do Safari ou mudares de dispositivo, podes perdê-los. Esta proteção local não é autenticação de servidor.</p>
+ </div>
+</div>
+<header><h1>WY ANALYZER</h1><p>Análise estatística assistida · Registo manual · Últimos 50 resultados</p></header>
+<main>
+ <section class="panel">
+  <span class="pill">3 jogos disponíveis</span>
+  <label for="game">Escolhe o jogo</label>
+  <select id="game" onchange="render()">
+   <option value="aviator">Aviator (Spribe)</option>
+   <option value="elephant">Elephant Jet</option>
+   <option value="bacbo">Bac Bo</option>
+  </select>
+  <div class="notice" style="margin-top:12px">O WY ANALYZER não lê automaticamente os jogos abertos no Safari e não garante previsões nem lucros. Introduz manualmente cada resultado depois da ronda terminar.</div>
+ </section>
+ <section class="panel">
+  <h2 id="entryTitle">Registar resultado</h2>
+  <div id="multiplierEntry">
+   <label for="multiplier">Multiplicador final (ex.: 2.35)</label><input id="multiplier" type="number" min="1" step="0.01" inputmode="decimal" placeholder="Ex.: 2.35">
+  </div>
+  <div id="bacEntry" class="hidden">
+   <label for="bacResult">Resultado Bac Bo</label><select id="bacResult"><option>Player</option><option>Banker</option><option>Tie</option></select>
+  </div>
+  <div class="row"><button onclick="addResult()">Guardar resultado</button><button class="secondary" onclick="undo()">Anular último</button></div>
+ </section>
+ <section class="panel">
+  <h2>Análise dos últimos 50</h2>
+  <div id="stats" class="stats"></div>
+  <div id="distribution"></div>
+ </section>
+ <section class="panel">
+  <h2>Testar uma previsão</h2>
+  <p style="color:var(--muted);font-size:14px">Regista a previsão antes da próxima ronda. O resultado seguinte será usado para avaliar se acertou.</p>
+  <label for="forecast">Previsão</label><select id="forecast"></select>
+  <button style="width:100%;margin-top:10px" onclick="saveForecast()">Registar previsão</button>
+  <div id="accuracy" style="margin-top:12px"></div>
+ </section>
+ <section class="panel">
+  <h2>Histórico recente</h2><div id="history"></div>
+  <div class="row"><button class="secondary" onclick="exportCSV()">Exportar CSV</button><button class="danger" onclick="clearGame()">Apagar dados deste jogo</button></div>
+ </section>
+ <section class="panel"><h2>Segurança e utilização</h2><p style="font-size:14px;color:var(--muted)">A palavra-passe é guardada como hash no armazenamento local do navegador. Não existe sincronização na nuvem. Para maior privacidade, não publiques dados pessoais. O site não acede à conta Elephant Bet nem à página do Aviator.</p><button class="secondary" onclick="lockApp()">Bloquear agora</button></section>
+ <footer>WY ANALYZER · Ferramenta estatística experimental. Não prevê resultados com certeza.</footer>
+</main>
+<script>
+const KEY='wy_analyzer_v2_store', AUTH='wy_analyzer_auth_v2';
+let store=JSON.parse(localStorage.getItem(KEY)||'{"aviator":[],"elephant":[],"bacbo":[],"forecasts":[]}');
+function save(){localStorage.setItem(KEY,JSON.stringify(store))}
+function game(){return document.getElementById('game').value}
+function records(){return store[game()]||[]}
+function isBac(){return game()==='bacbo'}
+function setupLock(){
+ const has=localStorage.getItem(AUTH);document.getElementById('setup').classList.toggle('hidden',!!has);document.getElementById('login').classList.toggle('hidden',!has);
+}
+async function hash(s,salt){const data=new TextEncoder().encode(s+salt);const digest=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function createPassword(){let p=document.getElementById('newpin').value;if(p.length<8)return alert('Usa pelo menos 8 caracteres.');let salt=crypto.getRandomValues(new Uint8Array(16));let s=[...salt].map(x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(AUTH,JSON.stringify({salt:s,hash:await hash(p,s)}));document.getElementById('setup').classList.add('hidden');document.getElementById('login').classList.remove('hidden');alert('Proteção criada. Entra com a tua palavra-passe.')}
+async function unlock(){let a=JSON.parse(localStorage.getItem(AUTH)||'null');if(!a)return setupLock();if(await hash(document.getElementById('pin').value,a.salt)===a.hash){document.getElementById('lock').classList.add('hidden');render()}else document.getElementById('loginError').textContent='Palavra-passe incorreta.'}
+function lockApp(){document.getElementById('pin').value='';document.getElementById('lock').classList.remove('hidden');setupLock()}
+function addResult(){
+ let v;if(isBac())v=document.getElementById('bacResult').value;else{v=Number(document.getElementById('multiplier').value);if(!Number.isFinite(v)||v<1)return alert('Introduz um multiplicador igual ou superior a 1.');}
+ let pending=store.forecasts.find(f=>f.game===game()&&!f.resolved);
+ if(pending){pending.resolved=true;pending.actual=v;pending.hit=matches(pending.pick,v,game())}
+ store[game()].push({v,time:new Date().toISOString()});if(store[game()].length>500)store[game()]=store[game()].slice(-500);
+ save();document.getElementById('multiplier').value='';render();
+}
+function matches(pick,v,g){if(g==='bacbo')return pick===v;if(pick==='below2')return v<2;if(pick==='ge150')return v>=1.5;if(pick==='ge200')return v>=2;if(pick==='ge300')return v>=3;return false}
+function saveForecast(){let pick=document.getElementById('forecast').value;if(store.forecasts.some(f=>f.game===game()&&!f.resolved))return alert('Já existe uma previsão pendente para este jogo. Regista primeiro o resultado.');store.forecasts.push({game:game(),pick,time:new Date().toISOString(),resolved:false});save();render()}
+function undo(){if(!records().length)return;records().pop();save();render()}
+function clearGame(){if(confirm('Apagar todos os resultados e previsões deste jogo?')){store[game()]=[];store.forecasts=store.forecasts.filter(f=>f.game!==game());save();render()}}
+function fmt(v){return Number(v).toFixed(2)+'x'}
+function render(){
+ let g=game(),bac=isBac(),arr=records(),last=arr.slice(-50),entry=document.getElementById('multiplierEntry'),bacEntry=document.getElementById('bacEntry');
+ entry.classList.toggle('hidden',bac);bacEntry.classList.toggle('hidden',!bac);
+ document.getElementById('entryTitle').textContent='Registar resultado · '+document.getElementById('game').selectedOptions[0].text;
+ let opts=bac?['Player','Banker','Tie']:[['ge150','≥ 1,50x'],['ge200','≥ 2,00x'],['ge300','≥ 3,00x'],['below2','Abaixo de 2,00x']];
+ document.getElementById('forecast').innerHTML=opts.map(o=>bac?`<option>${o}</option>`:`<option value="${o[0]}">${o[1]}</option>`).join('');
+ let stats='',dist='';
+ if(!last.length){stats='<div class="stat"><small>Resultados registados</small><strong>0</strong></div>';dist='<p style="color:var(--muted)">Ainda não existem resultados. Regista o primeiro resultado acima.</p>'}
+ else if(bac){
+  let counts={Player:0,Banker:0,Tie:0};last.forEach(x=>counts[x.v]++);
+  let streak=1;for(let i=last.length-1;i>0&&last[i].v===last[i-1].v;i--)streak++;
+  stats=`<div class="stat"><small>Resultados analisados</small><strong>${last.length}</strong></div><div class="stat"><small>Sequência atual</small><strong>${last[last.length-1].v} · ${streak}</strong></div>`;
+  dist='<table><tr><th>Resultado</th><th>Ocorrências</th><th>Frequência</th></tr>'+Object.entries(counts).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td><td>${(v/last.length*100).toFixed(1)}%</td></tr>`).join('')+'</table>';
+ }else{
+  let vals=last.map(x=>x.v),sorted=[...vals].sort((a,b)=>a-b),mean=vals.reduce((a,b)=>a+b,0)/vals.length,median=sorted.length%2?sorted[(sorted.length-1)/2]:(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2,max=Math.max(...vals);
+  let buckets=[['1,00–1,99x',v=>v<2],['2,00–4,99x',v=>v>=2&&v<5],['5,00–9,99x',v=>v>=5&&v<10],['10x ou mais',v=>v>=10]];
+  let bcounts=buckets.map(([n,fn])=>vals.filter(fn).length),latest=buckets.findIndex(([n,fn])=>fn(vals.at(-1))),streak=1;for(let i=vals.length-1;i>0&&buckets[latest][1](vals[i-1]);i--)streak++;
+  stats=`<div class="stat"><small>Resultados analisados</small><strong>${last.length}</strong></div><div class="stat"><small>Média</small><strong>${fmt(mean)}</strong></div><div class="stat"><small>Mediana</small><strong>${fmt(median)}</strong></div><div class="stat"><small>Máximo</small><strong>${fmt(max)}</strong></div>`;
+  dist='<table><tr><th>Faixa</th><th>Ocorrências</th><th>Frequência</th></tr>'+buckets.map(([n],i)=>`<tr><td>${n}</td><td>${bcounts[i]}</td><td>${(bcounts[i]/last.length*100).toFixed(1)}%</td></tr>`).join('')+`</table><p style="font-size:13px;color:var(--muted)">Sequência atual na faixa ${buckets[latest][0]}: ${streak} resultado(s).</p>`;
+ }
+ document.getElementById('stats').innerHTML=stats;document.getElementById('distribution').innerHTML=dist;
+ let forecasts=store.forecasts.filter(f=>f.game===g),done=forecasts.filter(f=>f.resolved),hits=done.filter(f=>f.hit).length,pending=forecasts.find(f=>!f.resolved);
+ document.getElementById('accuracy').innerHTML=`<strong>Taxa de acerto observada:</strong> ${done.length?(hits/done.length*100).toFixed(1)+'% ('+hits+'/'+done.length+')':'Ainda sem previsões avaliadas.'}`+(pending?'<p class="pill">Previsão pendente registada</p>':'');
+ document.getElementById('history').innerHTML=last.length?'<table><tr><th>#</th><th>Resultado</th><th>Data/hora</th></tr>'+last.slice().reverse().map((x,i)=>`<tr><td>${last.length-i}</td><td>${bac?x.v:fmt(x.v)}</td><td>${new Date(x.time).toLocaleString('pt-PT')}</td></tr>`).join('')+'</table>':'<p style="color:var(--muted)">Sem histórico.</p>';
+}
+function exportCSV(){let a=records();if(!a.length)return alert('Não há dados para exportar.');let rows=[['jogo','resultado','data'],...a.map(x=>[game(),x.v,x.time])];let csv=rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(';')).join('\n');let blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='wy-analyzer-'+game()+'.csv';link.click();URL.revokeObjectURL(url)}
+setupLock();
+</script>
+</body></html>
